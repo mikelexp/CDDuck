@@ -1,0 +1,41 @@
+# Binario
+cdduck
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Go
+vendor/
+*.test
+*.out
+*.test.exe
+*.prof
+coverage.out
+go.work
+go.work.sum
+
+# IDE / Editor
+.idea/
+*.swp
+*.swo
+*~
+.vscode/
+*.sublime-workspace
+*.sublime-project
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# Build artifacts
+/tmp/
+/dist/
+/build/
