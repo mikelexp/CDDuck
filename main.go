@@ -247,12 +247,8 @@ func (m *Model) doSelect() {
 	m.selected = m.currentDir
 	if len(m.filtered) > 0 && m.cursor < len(m.filtered) {
 		it := m.filtered[m.cursor]
-		if it.isDir {
-			if it.name == ".." {
-				m.selected = filepath.Dir(m.currentDir)
-			} else {
-				m.selected = filepath.Join(m.currentDir, it.name)
-			}
+		if it.isDir && it.name != ".." {
+			m.selected = filepath.Join(m.currentDir, it.name)
 		}
 	}
 }
