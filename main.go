@@ -297,7 +297,7 @@ func (m Model) View() string {
 		it := m.filtered[i]
 		text := it.name
 		if it.isDir && text != ".." {
-			text += "/"
+			text = "[" + text + "]"
 		}
 		tw := utf8.RuneCountInString(text)
 		if tw > contW {

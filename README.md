@@ -70,7 +70,7 @@ Tipeá `cdd` en la terminal. Se abre el browser fullscreen.
 ╭──────  CDDuck  ──────╮
 │                       │
 │  Documents/           │
-│  → proyectos/         │  ← item seleccionado con highlight azul
+║  → proyectos/         ║  ← item seleccionado con highlight synthwave
 │  file.txt             │
 │                       │
 ╰───────────────────────╯
@@ -78,9 +78,10 @@ Tipeá `cdd` en la terminal. Se abre el browser fullscreen.
 > filtro█                ← filtro fuzzy
 ```
 
-- **Highlight**: la línea seleccionada se marca con fondo azul, texto blanco y negrita.
-- **Path**: entre la caja y el filtro se muestra el directorio actual completo.
-- **Directorio**: se listan primero las carpetas (en cyan), orden alfabético.
+- **Highlight**: la línea seleccionada usa fondo rosa neón oscuro, texto negro y negrita.
+- **Path**: entre la caja y el filtro se muestra el directorio actual completo en gris suave.
+- **Directorio**: se listan primero las carpetas (en cian), orden alfabético.
+- **Marco**: el box usa borde doble para un look más arcade/synthwave.
 - **Filtro**: escribí para filtrar con fuzzy case-insensitive en vivo. `Esc` lo limpia.
 
 Para navegar: entrá a una carpeta con `Enter` y cuando estés donde quieras, `Alt+Enter` para salir a ese directorio. También podés usar `Esc` con el filtro vacío para salir al directorio actual.
