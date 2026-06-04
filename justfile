@@ -10,6 +10,7 @@ clean:
 install: build
 	mkdir -p ~/.local/bin
 	cp cdduck ~/.local/bin/cdduck
+	@printf '%s\n' '' 'CDDuck installed to ~/.local/bin/cdduck' '' 'Add this to your shell rc:' '' '  cdd() {' '      local dir' '      dir="$(cdduck)" || return' '      if [ -n "$dir" ]; then' '          cd -- "$dir"' '      fi' '  }' '' 'For fish:' '' '  function cdd' '      set dir (cdduck)' '      if test -n "$dir"' '          cd -- "$dir"' '      end' '  end'
 
 uninstall:
 	rm -f ~/.local/bin/cdduck

@@ -26,6 +26,7 @@ echo "Cloning AUR repo..."
 git clone "${AUR_SSH}" "${WORK_DIR}"
 
 cp "${ROOT_DIR}/PKGBUILD" "${WORK_DIR}/"
+cp "${ROOT_DIR}/cdduck.install" "${WORK_DIR}/"
 
 cd "${WORK_DIR}"
 sed -i "s/^pkgver=.*/pkgver=${APP_VERSION}/" PKGBUILD
@@ -35,7 +36,7 @@ sed -i "s/^sha256sums=.*/sha256sums=('${HASH}')/" PKGBUILD
 makepkg -s --noconfirm
 makepkg --printsrcinfo > .SRCINFO
 
-git add PKGBUILD .SRCINFO
+git add PKGBUILD .SRCINFO cdduck.install
 git commit -m "bump to v${APP_VERSION}"
 git push origin master
 

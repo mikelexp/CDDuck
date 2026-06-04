@@ -22,6 +22,7 @@ clean:
 install: build
 	mkdir -p "$(BIN_DIR)"
 	cp $(BIN) "$(BIN_DIR)/$(BIN)"
+	@printf '%s\n' '' "CDDuck installed to $(BIN_DIR)/$(BIN)" '' 'Add this to your shell rc:' '' '  cdd() {' '      local dir' '      dir="$$(cdduck)" || return' '      if [ -n "$$dir" ]; then' '          cd -- "$$dir"' '      fi' '  }' '' 'For fish:' '' '  function cdd' '      set dir (cdduck)' '      if test -n "$$dir"' '          cd -- "$$dir"' '      end' '  end'
 
 uninstall:
 	rm -f "$(BIN_DIR)/$(BIN)"

@@ -10,6 +10,7 @@ license=('MIT')
 depends=('glibc')
 provides=('cdduck')
 conflicts=('cdduck')
+install=cdduck.install
 source=("${pkgname}-${pkgver}.tar.gz::${url}/releases/download/v${pkgver}/cdduck-${pkgver}-linux-x86_64.tar.gz")
 # Placeholder checksum; scripts/aur-update.sh replaces this before publishing to AUR.
 sha256sums=('SKIP')

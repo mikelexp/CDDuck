@@ -8,6 +8,8 @@ A TUI file browser that replaces `cd` in the terminal. Browse the filesystem vis
 make install
 ```
 
+The installer prints the shell setup snippet after copying the binary.
+
 ## Shell Wrapper
 
 The binary prints the selected path to stdout and renders the TUI on `/dev/tty`. You still need a shell function to perform the actual `cd`.
