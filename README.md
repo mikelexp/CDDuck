@@ -10,6 +10,12 @@ make install
 
 The installer prints the shell setup snippet after copying the binary.
 
+Or install directly from AUR:
+
+```bash
+yay -S cdduck-bin
+```
+
 ## Shell Wrapper
 
 The binary prints the selected path to stdout and renders the TUI on `/dev/tty`. You still need a shell function to perform the actual `cd`.
