@@ -9,7 +9,6 @@ import (
 	"unicode/utf8"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 )
 
 type Item struct {
@@ -31,10 +30,12 @@ type Model struct {
 	focusStack []string
 }
 
-var (
-	dirStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("6")).Bold(true)
-	titleStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("15")).Bold(true)
-	keyStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("4")).Bold(true)
+const (
+	ansiReset  = "\033[0m"
+	ansiBlue   = "\033[34;1m"
+	ansiCyan   = "\033[36;1m"
+	ansiWhite  = "\033[37;1m"
+	ansiBlueBg = "\033[44;37;1m"
 )
 
 func main() {
@@ -324,8 +325,7 @@ func (m Model) View() string {
 	dashTotal := innerW
 	lDash := (dashTotal - titleW) / 2
 	rDash := dashTotal - lDash - titleW
-	frameStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("4")).Bold(true)
-	topB := frameStyle.Render("╔") + frameStyle.Render(strings.Repeat("═", lDash)) + titleStyle.Render(title) + frameStyle.Render(strings.Repeat("═", rDash)) + frameStyle.Render("╗")
+	topB := colorize("╔", ansiBlue) + colorize(strings.Repeat("═", lDash), ansiBlue) + colorize(title, ansiWhite) + colorize(strings.Repeat("═", rDash), ansiBlue) + colorize("╗", ansiBlue)
 
 	vis := m.contentHeight()
 	if vis < 1 {
@@ -342,7 +342,7 @@ func (m Model) View() string {
 	b.WriteString(topB)
 	b.WriteByte('\n')
 
-	emptyLine := frameStyle.Render("║") + strings.Repeat(" ", innerW) + frameStyle.Render("║") + "\n"
+	emptyLine := colorize("║", ansiBlue) + strings.Repeat(" ", innerW) + colorize("║", ansiBlue) + "\n"
 
 	b.WriteString(emptyLine)
 
@@ -360,19 +360,19 @@ func (m Model) View() string {
 
 		padding := strings.Repeat(" ", contW-tw)
 		if i == m.cursor {
-			line := "\033[44;37;1m  " + text + padding + "  \033[0m"
-			b.WriteString(frameStyle.Render("║"))
+			line := ansiBlueBg + "  " + text + padding + "  " + ansiReset
+			b.WriteString(colorize("║", ansiBlue))
 			b.WriteString(line)
-			b.WriteString(frameStyle.Render("║"))
+			b.WriteString(colorize("║", ansiBlue))
 			b.WriteByte('\n')
 		} else {
 			line := "  " + text + padding + "  "
 			if it.isDir {
-				line = dirStyle.Render(line)
+				line = colorize(line, ansiCyan)
 			}
-			b.WriteString(frameStyle.Render("║"))
+			b.WriteString(colorize("║", ansiBlue))
 			b.WriteString(line)
-			b.WriteString(frameStyle.Render("║"))
+			b.WriteString(colorize("║", ansiBlue))
 			b.WriteByte('\n')
 		}
 	}
@@ -383,9 +383,9 @@ func (m Model) View() string {
 
 	b.WriteString(emptyLine)
 
-	b.WriteString(frameStyle.Render("╚"))
-	b.WriteString(frameStyle.Render(strings.Repeat("═", innerW)))
-	b.WriteString(frameStyle.Render("╝"))
+	b.WriteString(colorize("╚", ansiBlue))
+	b.WriteString(colorize(strings.Repeat("═", innerW), ansiBlue))
+	b.WriteString(colorize("╝", ansiBlue))
 	b.WriteByte('\n')
 
 	path := m.currentDir
@@ -393,12 +393,12 @@ func (m Model) View() string {
 	if plen > m.width {
 		path = "…" + string([]rune(path)[plen-m.width+1:])
 	}
-	b.WriteString(keyStyle.Render("Current path:"))
+	b.WriteString(colorize("Current path:", ansiBlue))
 	b.WriteString(" ")
 	b.WriteString(path)
 	b.WriteByte('\n')
 
-	b.WriteString(keyStyle.Render("Filter:"))
+	b.WriteString(colorize("Filter:", ansiBlue))
 	b.WriteString(" ")
 	b.WriteString(m.filter)
 	b.WriteString("█")
@@ -441,7 +441,7 @@ func shortcutsLine(width int) string {
 			break
 		}
 		if part.styled {
-			b.WriteString(keyStyle.Render(part.plain))
+			b.WriteString(colorize(part.plain, ansiBlue))
 		} else {
 			b.WriteString(part.plain)
 		}
@@ -462,4 +462,8 @@ func max(a, b int) int {
 		return a
 	}
 	return b
+}
+
+func colorize(s, code string) string {
+	return code + s + ansiReset
 }

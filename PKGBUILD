@@ -1,7 +1,7 @@
 # Maintainer: Mikele <mikele@gmail.com>
 
 pkgname=cdduck-bin
-pkgver=1.0.1
+pkgver=1.0.2
 pkgrel=1
 pkgdesc="TUI file browser that replaces cd in the terminal"
 arch=('x86_64')
