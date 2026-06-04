@@ -32,9 +32,9 @@ type Model struct {
 }
 
 var (
-	dirStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#1D99F3")).Bold(true)
+	dirStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("6")).Bold(true)
 	titleStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("15")).Bold(true)
-	keyStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#1D99F3")).Bold(true)
+	keyStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("4")).Bold(true)
 )
 
 func main() {
@@ -324,7 +324,7 @@ func (m Model) View() string {
 	dashTotal := innerW
 	lDash := (dashTotal - titleW) / 2
 	rDash := dashTotal - lDash - titleW
-	frameStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#1D99F3")).Bold(true)
+	frameStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("4")).Bold(true)
 	topB := frameStyle.Render("╔") + frameStyle.Render(strings.Repeat("═", lDash)) + titleStyle.Render(title) + frameStyle.Render(strings.Repeat("═", rDash)) + frameStyle.Render("╗")
 
 	vis := m.contentHeight()
