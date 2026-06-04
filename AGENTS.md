@@ -1,12 +1,19 @@
 # CDDuck
 
-TUI file browser que reemplaza `cd`. Escrito en Go con [bubbletea](https://github.com/charmbracelet/bubbletea) y [lipgloss](https://github.com/charmbracelet/lipgloss).
+TUI file browser que reemplaza `cd`. Escrito en Go con [bubbletea](https://github.com/charmbracelet/bubbletea).
 
 ## Build
 
 ```bash
 go build -buildvcs=false -o cdduck .
 ```
+
+## Install / Release
+
+- `make install` o `just install` copian el binario a `~/.local/bin` y muestran el snippet de shell.
+- También se puede instalar directo desde AUR como `cdduck-bin`.
+- `make set-version VERSION=x.y.z` y `just set-version x.y.z` actualizan `version.go` y `PKGBUILD`.
+- `make aur-update` y `just aur-update` publican el release en AUR desde el tarball de GitHub Releases.
 
 ## Arquitectura
 
@@ -31,7 +38,7 @@ cdd() {
 
 ## Detalle clave: cursor highlight
 
-El cursor se pinta con **códigos ANSI 16 crudos** (`\033[44;37;1m` = fondo azul, texto blanco, negrita), no con lipgloss. Esto es porque algunos terminales no soportan colores 256 ni true color para backgrounds. Los directorios usan lipgloss con color ANSI 16 (`"6"` = cyan).
+El cursor se pinta con **códigos ANSI crudos** (`\033[44;37;1m` = fondo azul, texto blanco, negrita), no con lipgloss. Los directorios usan ANSI 16 (`\033[36;1m` = cyan). Los labels y bordes usan azul ANSI (`\033[34;1m`).
 
 ## Teclas
 
@@ -49,4 +56,3 @@ El cursor se pinta con **códigos ANSI 16 crudos** (`\033[44;37;1m` = fondo azul
 ## Dependencias
 
 - `github.com/charmbracelet/bubbletea` — TUI framework
-- `github.com/charmbracelet/lipgloss` — estilos (solo para directorios)
