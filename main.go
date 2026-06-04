@@ -27,9 +27,15 @@ type Model struct {
 	width      int
 	height     int
 	selected   string
+	focusName  string
+	focusStack []string
 }
 
-var dirStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("6"))
+var (
+	dirStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#1D99F3")).Bold(true)
+	titleStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("15")).Bold(true)
+	keyStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("#1D99F3")).Bold(true)
+)
 
 func main() {
 	dir, _ := os.Getwd()
@@ -71,9 +77,6 @@ func (m *Model) loadItems() {
 
 	for _, e := range entries {
 		name := e.Name()
-		if strings.HasPrefix(name, ".") {
-			continue
-		}
 		m.items = append(m.items, Item{name: name, isDir: e.IsDir()})
 	}
 
@@ -85,6 +88,17 @@ func (m *Model) loadItems() {
 	})
 
 	m.applyFilter()
+	if m.focusName != "" {
+		for i, it := range m.filtered {
+			if it.name == m.focusName {
+				m.cursor = i
+				m.offset = 0
+				m.ensureVisible()
+				break
+			}
+		}
+		m.focusName = ""
+	}
 }
 
 func fuzzyMatch(s, pat string) bool {
@@ -115,7 +129,7 @@ func (m *Model) applyFilter() {
 }
 
 func (m *Model) ensureVisible() {
-	visible := m.height - 6
+	visible := m.contentHeight()
 	if visible < 1 {
 		visible = 1
 	}
@@ -170,12 +184,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 
 		case k == "pgup":
-			visible := max(1, m.height-6)
+			visible := max(1, m.contentHeight())
 			m.cursor = max(0, m.cursor-visible)
 			m.ensureVisible()
 
 		case k == "pgdown":
-			visible := max(1, m.height-6)
+			visible := max(1, m.contentHeight())
 			m.cursor = min(len(m.filtered)-1, m.cursor+visible)
 			m.ensureVisible()
 
@@ -197,12 +211,29 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.doSelect()
 			return m, tea.Quit
 
-		case k == "backspace" || k == "ctrl+h":
+		case k == "ctrl+h":
+			if home, err := os.UserHomeDir(); err == nil && home != "" {
+				m.currentDir = home
+				m.cursor = 0
+				m.offset = 0
+				m.filter = ""
+				m.focusName = ""
+				m.focusStack = nil
+				m.loadItems()
+			}
+
+		case k == "backspace":
 			if m.filter != "" {
 				runes := []rune(m.filter)
 				m.filter = string(runes[:len(runes)-1])
 				m.applyFilter()
 			} else if m.currentDir != "/" {
+				if n := len(m.focusStack); n > 0 {
+					m.focusName = m.focusStack[n-1]
+					m.focusStack = m.focusStack[:n-1]
+				} else {
+					m.focusName = filepath.Base(m.currentDir)
+				}
 				m.currentDir = filepath.Dir(m.currentDir)
 				m.cursor = 0
 				m.offset = 0
@@ -231,8 +262,15 @@ func (m *Model) doEnter() {
 	}
 	it := m.filtered[m.cursor]
 	if it.name == ".." {
+		if n := len(m.focusStack); n > 0 {
+			m.focusName = m.focusStack[n-1]
+			m.focusStack = m.focusStack[:n-1]
+		} else {
+			m.focusName = filepath.Base(m.currentDir)
+		}
 		m.currentDir = filepath.Dir(m.currentDir)
 	} else if it.isDir {
+		m.focusStack = append(m.focusStack, it.name)
 		m.currentDir = filepath.Join(m.currentDir, it.name)
 	} else {
 		return
@@ -272,9 +310,10 @@ func (m Model) View() string {
 	dashTotal := innerW
 	lDash := (dashTotal - titleW) / 2
 	rDash := dashTotal - lDash - titleW
-	topB := "╭" + strings.Repeat("─", lDash) + title + strings.Repeat("─", rDash) + "╮"
+	frameStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#1D99F3")).Bold(true)
+	topB := frameStyle.Render("╔") + frameStyle.Render(strings.Repeat("═", lDash)) + titleStyle.Render(title) + frameStyle.Render(strings.Repeat("═", rDash)) + frameStyle.Render("╗")
 
-	vis := m.height - 6
+	vis := m.contentHeight()
 	if vis < 1 {
 		vis = 1
 	}
@@ -289,7 +328,7 @@ func (m Model) View() string {
 	b.WriteString(topB)
 	b.WriteByte('\n')
 
-	emptyLine := "│" + strings.Repeat(" ", innerW) + "│\n"
+	emptyLine := frameStyle.Render("║") + strings.Repeat(" ", innerW) + frameStyle.Render("║") + "\n"
 
 	b.WriteString(emptyLine)
 
@@ -308,17 +347,19 @@ func (m Model) View() string {
 		padding := strings.Repeat(" ", contW-tw)
 		if i == m.cursor {
 			line := "\033[44;37;1m  " + text + padding + "  \033[0m"
-			b.WriteString("│")
+			b.WriteString(frameStyle.Render("║"))
 			b.WriteString(line)
-			b.WriteString("│\n")
+			b.WriteString(frameStyle.Render("║"))
+			b.WriteByte('\n')
 		} else {
 			line := "  " + text + padding + "  "
 			if it.isDir {
 				line = dirStyle.Render(line)
 			}
-			b.WriteString("│")
+			b.WriteString(frameStyle.Render("║"))
 			b.WriteString(line)
-			b.WriteString("│\n")
+			b.WriteString(frameStyle.Render("║"))
+			b.WriteByte('\n')
 		}
 	}
 
@@ -328,22 +369,70 @@ func (m Model) View() string {
 
 	b.WriteString(emptyLine)
 
-	b.WriteString("╰")
-	b.WriteString(strings.Repeat("─", innerW))
-	b.WriteString("╯\n")
+	b.WriteString(frameStyle.Render("╚"))
+	b.WriteString(frameStyle.Render(strings.Repeat("═", innerW)))
+	b.WriteString(frameStyle.Render("╝"))
+	b.WriteByte('\n')
 
 	path := m.currentDir
 	plen := utf8.RuneCountInString(path)
 	if plen > m.width {
 		path = "…" + string([]rune(path)[plen-m.width+1:])
 	}
+	b.WriteString(keyStyle.Render("Current path:"))
+	b.WriteString(" ")
 	b.WriteString(path)
 	b.WriteByte('\n')
 
-	b.WriteString("> ")
+	b.WriteString(keyStyle.Render("Filter:"))
+	b.WriteString(" ")
 	b.WriteString(m.filter)
 	b.WriteString("█")
+	b.WriteByte('\n')
+	b.WriteString(shortcutsLine(m.width))
 
+	return b.String()
+}
+
+func (m Model) contentHeight() int {
+	return m.height - 7
+}
+
+func shortcutsLine(width int) string {
+	type segment struct {
+		plain  string
+		styled bool
+	}
+
+	parts := []segment{
+		{"↑↓", true}, {" nav  ", false},
+		{"PgUp/PgDn", true}, {" page  ", false},
+		{"Home/End", true}, {" first/last  ", false},
+		{"Enter", true}, {" open  ", false},
+		{"Alt+Enter", true}, {" select  ", false},
+		{"Backspace", true}, {" up/filter  ", false},
+		{"Esc", true}, {" clear/exit  ", false},
+		{"Ctrl+H", true}, {" home  ", false},
+		{"Ctrl+C/Q", true}, {" quit", false},
+	}
+
+	var b strings.Builder
+	visible := 0
+	for _, part := range parts {
+		count := utf8.RuneCountInString(part.plain)
+		if width > 0 && visible+count > width {
+			if width > 1 && visible < width {
+				b.WriteString("…")
+			}
+			break
+		}
+		if part.styled {
+			b.WriteString(keyStyle.Render(part.plain))
+		} else {
+			b.WriteString(part.plain)
+		}
+		visible += count
+	}
 	return b.String()
 }
 
