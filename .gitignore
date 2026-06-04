@@ -39,3 +39,5 @@ Desktop.ini
 /tmp/
 /dist/
 /build/
+/release/
+cdduck-*.tar.gz

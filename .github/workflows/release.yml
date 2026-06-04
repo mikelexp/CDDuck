@@ -1,0 +1,40 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      CGO_ENABLED: 0
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Build release binary
+        run: |
+          mkdir -p release
+          go build -buildvcs=false -trimpath -ldflags='-s -w' -o release/cdduck .
+
+      - name: Package release tarball
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          cp README.md release/
+          cp LICENSE release/
+
+          cd release
+          tar --owner=0 --group=0 --numeric-owner -czf "../cdduck-${VERSION}-linux-x86_64.tar.gz" cdduck README.md LICENSE
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: cdduck-*-linux-x86_64.tar.gz

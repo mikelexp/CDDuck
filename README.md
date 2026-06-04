@@ -1,26 +1,16 @@
 # CDDuck
 
-TUI file browser para reemplazar `cd` en la terminal. Navegá visualmente por el filesystem y salí al directorio elegido.
+A TUI file browser that replaces `cd` in the terminal. Browse the filesystem visually and exit into the selected directory.
 
-## Instalación
-
-```bash
-./install.sh
-```
-
-O manualmente:
+## Install
 
 ```bash
-go build -buildvcs=false -o cdduck .
-mkdir -p ~/.local/bin
-cp cdduck ~/.local/bin/
+make install
 ```
 
-## Shell wrapper
+## Shell Wrapper
 
-El binario imprime el path a stdout y la TUI va a `/dev/tty`. Necesitás una función shell para que haga el `cd` real.
-
-El `install.sh` la agrega automáticamente, o la podés copiar manualmente:
+The binary prints the selected path to stdout and renders the TUI on `/dev/tty`. You still need a shell function to perform the actual `cd`.
 
 ### Bash / Zsh
 
@@ -45,53 +35,49 @@ function cdd
 end
 ```
 
-Agregá la función a `~/.bashrc`, `~/.zshrc` o `~/.config/fish/config.fish` y recargá con `source`.
+Add the function to `~/.bashrc`, `~/.zshrc`, or `~/.config/fish/config.fish`, then reload your shell with `source`.
 
-## Uso
+To check the installed version, run `cdduck --version`.
 
-Tipeá `cdd` en la terminal. Se abre el browser fullscreen.
+## Usage
 
-### Teclas
+Run `cdd` in the terminal. The browser opens fullscreen.
 
-| Tecla | Acción |
+### Keys
+
+| Key | Action |
 |---|---|
-| `↑` / `↓` | Navegar entre items |
-| `PgUp` / `PgDn` | Avanzar / retroceder una página |
-| `Home` / `End` | Ir al primer / último item |
-| `Enter` | Entrar al directorio seleccionado |
-| `Alt+Enter` | Seleccionar carpeta y salir |
-| `Backspace` | Subir un nivel (filtro vacío) / borrar carácter (filtro activo) |
-| `Esc` | Limpiar el filtro (si hay texto) o salir al directorio actual |
-| `Ctrl+C` / `Ctrl+Q` | Salir sin seleccionar |
+| `↑` / `↓` | Move between items |
+| `PgUp` / `PgDn` | Page up / down |
+| `Home` / `End` | First / last item |
+| `Enter` | Open the selected directory |
+| `Alt+Enter` | Select the current folder and exit |
+| `Backspace` | Go up a level (empty filter) / delete a character (active filter) |
+| `Esc` | Clear the filter (if there is text) or exit into the current directory |
+| `Ctrl+H` | Jump to your home directory |
+| `Ctrl+C` / `Ctrl+Q` | Quit without selecting |
 
-### Interfaz
+### UI
 
-```
-╭──────  CDDuck  ──────╮
-│                       │
-│  Documents/           │
-║  → proyectos/         ║  ← item seleccionado con highlight synthwave
-│  file.txt             │
-│                       │
-╰───────────────────────╯
-/home/user              ← path actual
-> filtro█                ← filtro fuzzy
-```
+- **Highlight**: the selected line uses a blue background, white text, and bold weight.
+- **Path**: the full current directory is shown below the box, after the `Current path:` label.
+- **Directories**: folders are listed first, in cyan, sorted alphabetically.
+- **Frame**: the box uses a double blue border with the title centered at the top.
+- **Labels**: `Current path:` and `Filter:` are rendered in blue.
+- **Filter**: type to fuzzy-filter items case-insensitively in real time. `Esc` clears it.
 
-- **Highlight**: la línea seleccionada usa fondo rosa neón oscuro, texto negro y negrita.
-- **Path**: entre la caja y el filtro se muestra el directorio actual completo en gris suave.
-- **Directorio**: se listan primero las carpetas (en cian), orden alfabético.
-- **Marco**: el box usa borde doble para un look más arcade/synthwave.
-- **Filtro**: escribí para filtrar con fuzzy case-insensitive en vivo. `Esc` lo limpia.
+To navigate, open a folder with `Enter` and press `Alt+Enter` when you want to exit into that directory. You can also press `Esc` with an empty filter to exit into the current directory.
 
-Para navegar: entrá a una carpeta con `Enter` y cuando estés donde quieras, `Alt+Enter` para salir a ese directorio. También podés usar `Esc` con el filtro vacío para salir al directorio actual.
+## Build From Source
 
-## Build desde fuente
-
-Requiere Go 1.21+.
+Requires Go 1.26.3+.
 
 ```bash
 git clone ...
 cd cdduck
 go build -buildvcs=false -o cdduck .
 ```
+
+## License
+
+MIT

@@ -38,6 +38,11 @@ var (
 )
 
 func main() {
+	if hasVersionArg(os.Args[1:]) {
+		fmt.Println(Version)
+		return
+	}
+
 	dir, _ := os.Getwd()
 
 	tty, err := os.OpenFile("/dev/tty", os.O_WRONLY, 0)
@@ -60,6 +65,15 @@ func main() {
 	if m, ok := final.(Model); ok && m.selected != "" {
 		fmt.Println(m.selected)
 	}
+}
+
+func hasVersionArg(args []string) bool {
+	for _, arg := range args {
+		if arg == "-version" || arg == "--version" {
+			return true
+		}
+	}
+	return false
 }
 
 func (m *Model) loadItems() {
