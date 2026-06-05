@@ -368,7 +368,7 @@ func (m Model) View() string {
 		} else {
 			line := "  " + text + padding + "  "
 			if it.isDir {
-				line = colorize(line, ansiCyan)
+				line = colorize(line, ansiWhite)
 			}
 			b.WriteString(colorize("║", ansiBlue))
 			b.WriteString(line)
