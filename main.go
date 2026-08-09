@@ -1,6 +1,8 @@
 package main
 
 import (
+	"errors"
+	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -39,12 +41,15 @@ const (
 )
 
 func main() {
-	if hasVersionArg(os.Args[1:]) {
+	dir, showVersion, err := parseArgs(os.Args[1:])
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "cdduck:", err)
+		os.Exit(2)
+	}
+	if showVersion {
 		fmt.Println(Version)
 		return
 	}
-
-	dir, _ := os.Getwd()
 
 	tty, err := os.OpenFile("/dev/tty", os.O_WRONLY, 0)
 	if err != nil {
@@ -68,13 +73,49 @@ func main() {
 	}
 }
 
-func hasVersionArg(args []string) bool {
-	for _, arg := range args {
-		if arg == "-version" || arg == "--version" {
-			return true
+func parseArgs(args []string) (string, bool, error) {
+	flags := flag.NewFlagSet("cdduck", flag.ContinueOnError)
+	flags.SetOutput(os.Stderr)
+	showVersion := flags.Bool("version", false, "print version and exit")
+	flags.BoolVar(showVersion, "V", false, "print version and exit")
+	if err := flags.Parse(args); err != nil {
+		return "", false, err
+	}
+
+	paths := flags.Args()
+	if *showVersion {
+		if len(paths) != 0 {
+			return "", false, errors.New("--version does not accept a path")
+		}
+		return "", true, nil
+	}
+	if len(paths) > 1 {
+		return "", false, errors.New("accepts at most one starting path")
+	}
+
+	dir := ""
+	if len(paths) == 1 {
+		var err error
+		dir, err = filepath.Abs(paths[0])
+		if err != nil {
+			return "", false, err
+		}
+	} else {
+		var err error
+		dir, err = os.Getwd()
+		if err != nil {
+			return "", false, err
 		}
 	}
-	return false
+
+	info, err := os.Stat(dir)
+	if err != nil {
+		return "", false, err
+	}
+	if !info.IsDir() {
+		return "", false, fmt.Errorf("%q is not a directory", dir)
+	}
+	return dir, false, nil
 }
 
 func (m *Model) loadItems() {
@@ -320,7 +361,10 @@ func (m Model) View() string {
 		contW = 1
 	}
 
-	title := "  CDDuck  "
+	title := " CDDuck v" + Version + " "
+	if utf8.RuneCountInString(title) > innerW {
+		title = string([]rune(title)[:innerW])
+	}
 	titleW := utf8.RuneCountInString(title)
 	dashTotal := innerW
 	lDash := (dashTotal - titleW) / 2

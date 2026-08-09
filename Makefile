@@ -22,7 +22,7 @@ clean:
 install: build
 	mkdir -p "$(BIN_DIR)"
 	cp $(BIN) "$(BIN_DIR)/$(BIN)"
-	@printf '%s\n' '' "CDDuck installed to $(BIN_DIR)/$(BIN)" '' 'Add this to your shell rc:' '' '  cdd() {' '      local dir' '      dir="$$(cdduck)" || return' '      if [ -n "$$dir" ]; then' '          cd -- "$$dir"' '      fi' '  }' '' 'For fish:' '' '  function cdd' '      set dir (cdduck)' '      if test -n "$$dir"' '          cd -- "$$dir"' '      end' '  end'
+	@printf '%s\n' '' "CDDuck installed to $(BIN_DIR)/$(BIN)" '' 'Add this to your shell rc:' '' '  cdd() {' '      if [ "$$1" = "--version" ] || [ "$$1" = "-V" ]; then' '          cdduck "$$@"' '          return' '      fi' '      local dir' '      dir="$$(cdduck "$$@")" || return' '      if [ -n "$$dir" ]; then' '          cd -- "$$dir"' '      fi' '  }' '' 'For fish:' '' '  function cdd' '      if test "$$argv[1]" = --version; or test "$$argv[1]" = -V' '          cdduck $$argv' '          return' '      end' '      set dir (cdduck $$argv)' '      if test -n "$$dir"' '          cd -- "$$dir"' '      end' '  end'
 
 uninstall:
 	rm -f "$(BIN_DIR)/$(BIN)"

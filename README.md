@@ -24,8 +24,12 @@ The binary prints the selected path to stdout and renders the TUI on `/dev/tty`.
 
 ```bash
 cdd() {
+    if [ "$1" = "--version" ] || [ "$1" = "-V" ]; then
+        cdduck "$@"
+        return
+    fi
     local dir
-    dir="$(cdduck)" || return
+    dir="$(cdduck "$@")" || return
     if [ -n "$dir" ]; then
         cd -- "$dir"
     fi
@@ -36,7 +40,11 @@ cdd() {
 
 ```fish
 function cdd
-    set dir (cdduck)
+    if test "$argv[1]" = --version; or test "$argv[1]" = -V
+        cdduck $argv
+        return
+    end
+    set dir (cdduck $argv)
     if test -n "$dir"
         cd -- "$dir"
     end
@@ -45,11 +53,11 @@ end
 
 Add the function to `~/.bashrc`, `~/.zshrc`, or `~/.config/fish/config.fish`, then reload your shell with `source`.
 
-To check the installed version, run `cdduck --version`.
+To check the installed version, run `cdduck --version` or `cdduck -V`.
 
 ## Usage
 
-Run `cdd` in the terminal. The browser opens fullscreen.
+Run `cdd` in the terminal. The browser opens fullscreen. Pass a directory to start there, for example `cdd /run/media` or `cdd ../other-project`.
 
 ### Keys
 
