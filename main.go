@@ -398,7 +398,7 @@ func (m Model) View() string {
 		}
 		tw := utf8.RuneCountInString(text)
 		if tw > contW {
-			text = string([]rune(text)[:contW])
+			text = truncateWithEllipsis(text, contW)
 			tw = contW
 		}
 
@@ -450,6 +450,17 @@ func (m Model) View() string {
 	b.WriteString(shortcutsLine(m.width))
 
 	return b.String()
+}
+
+func truncateWithEllipsis(text string, width int) string {
+	if width <= 0 {
+		return ""
+	}
+	if width == 1 {
+		return "…"
+	}
+	runes := []rune(text)
+	return string(runes[:width-1]) + "…"
 }
 
 func (m Model) contentHeight() int {
