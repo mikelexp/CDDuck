@@ -422,7 +422,7 @@ func (m *Model) updateHistory(k string, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	visible := m.historyVisibleRows()
 	switch {
 	case k == "ctrl+c" || k == "ctrl+q":
-		return m, tea.Quit
+		return *m, tea.Quit
 	case k == "ctrl+h":
 		m.historyOpen = false
 	case k == "esc":
@@ -463,8 +463,15 @@ func (m *Model) updateHistory(k string, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	case k == "enter" || k == "alt+enter":
 		if len(filtered) > 0 {
-			m.selected = filtered[m.historyCursor]
-			return m, tea.Quit
+			m.currentDir = filtered[m.historyCursor]
+			m.cursor = 0
+			m.offset = 0
+			m.filter = ""
+			m.focusName = ""
+			m.focusStack = nil
+			m.historyOpen = false
+			m.loadItems()
+			return *m, nil
 		}
 	case k == "backspace":
 		if m.historyFilter != "" {
@@ -482,7 +489,7 @@ func (m *Model) updateHistory(k string, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	}
 	m.ensureHistoryVisible()
-	return m, nil
+	return *m, nil
 }
 
 func (m Model) filteredHistory() []string {
@@ -625,7 +632,7 @@ func (m Model) overlayHistory(base string) string {
 	modal = append(modal, emptyLine)
 	filterText := "Filter: " + m.historyFilter + "█"
 	modal = append(modal, frameLine(filterText))
-	modal = append(modal, frameLine("↑↓ navigate · Enter select · Ctrl+R remove · Esc close"))
+	modal = append(modal, frameLine("↑↓ navigate · Enter open · Ctrl+R remove · Esc close"))
 	modal = append(modal, bottomLine)
 	if len(modal) > modalHeight {
 		modal = modal[:modalHeight]

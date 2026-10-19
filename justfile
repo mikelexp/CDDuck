@@ -13,15 +13,14 @@ build:
 clean:
 	rm -rf cdduck release
 
-# Build and install to ~/.local/bin
+# Build and install to /usr/bin (requires sudo)
 install: build
-	mkdir -p ~/.local/bin
-	cp cdduck ~/.local/bin/cdduck
-	@printf '%s\n' '' 'CDDuck installed to ~/.local/bin/cdduck' '' 'Add this to your shell rc:' '' '  cdd() {' '      if [ "$1" = "--version" ] || [ "$1" = "-V" ]; then' '          cdduck "$@"' '          return' '      fi' '      local dir' '      dir="$(cdduck "$@")" || return' '      if [ -n "$dir" ]; then' '          cd -- "$dir"' '      fi' '  }' '' 'For fish:' '' '  function cdd' '      if test "$argv[1]" = --version; or test "$argv[1]" = -V' '          cdduck $argv' '          return' '      end' '      set dir (cdduck $argv)' '      if test -n "$dir"' '          cd -- "$dir"' '      end' '  end'
+	sudo install -Dm755 cdduck /usr/bin/cdduck
+	@printf '%s\n' '' 'CDDuck installed to /usr/bin/cdduck' '' 'Add this to your shell rc:' '' '  cdd() {' '      if [ "$1" = "--version" ] || [ "$1" = "-V" ]; then' '          cdduck "$@"' '          return' '      fi' '      local dir' '      dir="$(cdduck "$@")" || return' '      if [ -n "$dir" ]; then' '          cd -- "$dir"' '      fi' '  }' '' 'For fish:' '' '  function cdd' '      if test "$argv[1]" = --version; or test "$argv[1]" = -V' '          cdduck $argv' '          return' '      end' '      set dir (cdduck $argv)' '      if test -n "$dir"' '          cd -- "$dir"' '      end' '  end'
 
 # Remove the installed binary
 uninstall:
-	rm -f ~/.local/bin/cdduck
+	sudo rm -f /usr/bin/cdduck
 
 # Print the current app version
 version:

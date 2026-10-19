@@ -1,5 +1,5 @@
 BIN := cdduck
-BIN_DIR := $(HOME)/.local/bin
+BIN_DIR := /usr/bin
 
 .PHONY: help build clean install uninstall version set-version release aur-update
 
@@ -7,7 +7,7 @@ help:
 	@echo "Targets:"
 	@echo "  build        Build the binary"
 	@echo "  clean        Remove build artifacts"
-	@echo "  install      Build and install to ~/.local/bin"
+	@echo "  install      Build and install to /usr/bin (requires sudo)"
 	@echo "  uninstall    Remove the installed binary"
 	@echo "  version      Print the current app version"
 	@echo "  set-version  Set Version in version.go and PKGBUILD (use VERSION=...)"
@@ -21,12 +21,11 @@ clean:
 	rm -rf $(BIN) release
 
 install: build
-	mkdir -p "$(BIN_DIR)"
-	cp $(BIN) "$(BIN_DIR)/$(BIN)"
+	sudo install -Dm755 "$(BIN)" "$(BIN_DIR)/$(BIN)"
 	@printf '%s\n' '' "CDDuck installed to $(BIN_DIR)/$(BIN)" '' 'Add this to your shell rc:' '' '  cdd() {' '      if [ "$$1" = "--version" ] || [ "$$1" = "-V" ]; then' '          cdduck "$$@"' '          return' '      fi' '      local dir' '      dir="$$(cdduck "$$@")" || return' '      if [ -n "$$dir" ]; then' '          cd -- "$$dir"' '      fi' '  }' '' 'For fish:' '' '  function cdd' '      if test "$$argv[1]" = --version; or test "$$argv[1]" = -V' '          cdduck $$argv' '          return' '      end' '      set dir (cdduck $$argv)' '      if test -n "$$dir"' '          cd -- "$$dir"' '      end' '  end'
 
 uninstall:
-	rm -f "$(BIN_DIR)/$(BIN)"
+	sudo rm -f "$(BIN_DIR)/$(BIN)"
 
 version:
 	@python3 -c "import re; from pathlib import Path; text = Path('version.go').read_text(); m = re.search(r'const Version = \"([^\"]+)\"', text); print(m.group(1) if m else '')"

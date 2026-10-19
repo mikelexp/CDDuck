@@ -10,7 +10,7 @@ go build -buildvcs=false -o cdduck .
 
 ## Install / Release
 
-- `make install` o `just install` copian el binario a `~/.local/bin` y muestran el snippet de shell.
+- `make install` o `just install` instalan el binario en `/usr/bin/cdduck` con `sudo` y muestran el snippet de shell.
 - Los targets equivalentes de `Makefile` y `justfile` siempre deben mantenerse sincronizados.
 - También se puede instalar directo desde AUR como `cdduck-bin`.
 - `make set-version VERSION=x.y.z` y `just set-version x.y.z` actualizan `version.go` y `PKGBUILD`.

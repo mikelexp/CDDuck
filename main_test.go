@@ -1,9 +1,12 @@
 package main
 
 import (
+	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
+
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 func TestTruncateWithEllipsis(t *testing.T) {
@@ -60,5 +63,34 @@ func TestSaveAndLoadHistory(t *testing.T) {
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("loadHistory() = %#v, want %#v", got, want)
+	}
+}
+
+func TestOpeningHistoryEntryNavigatesMainWindow(t *testing.T) {
+	root := t.TempDir()
+	target := filepath.Join(root, "target")
+	if err := os.Mkdir(target, 0700); err != nil {
+		t.Fatalf("Mkdir() error = %v", err)
+	}
+	m := Model{
+		currentDir:  root,
+		history:     []string{target},
+		historyOpen: true,
+	}
+	m.loadItems()
+
+	updated, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	if cmd != nil {
+		t.Fatalf("Update() command = %v, want nil", cmd)
+	}
+	got := updated.(Model)
+	if got.currentDir != target {
+		t.Errorf("currentDir = %q, want %q", got.currentDir, target)
+	}
+	if got.historyOpen {
+		t.Error("history modal remained open after choosing an entry")
+	}
+	if got.selected != "" {
+		t.Errorf("selected = %q, want empty (navigation should not exit)", got.selected)
 	}
 }
