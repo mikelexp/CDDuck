@@ -70,7 +70,8 @@ Run `cdd` in the terminal. The browser opens fullscreen. Pass a directory to sta
 | `Alt+Enter` | Select the current folder and exit |
 | `Backspace` | Go up a level (empty filter) / delete a character (active filter) |
 | `Esc` | Clear the filter (if there is text) or exit into the current directory |
-| `Ctrl+H` | Jump to your home directory |
+| `Ctrl+H` | Open the directory history |
+| `Alt+H` | Jump to your home directory |
 | `Ctrl+C` / `Ctrl+Q` | Quit without selecting |
 
 ### UI
@@ -81,6 +82,8 @@ Run `cdd` in the terminal. The browser opens fullscreen. Pass a directory to sta
 - **Frame**: the box uses a double blue border with the title centered at the top.
 - **Labels**: `Current path:` and `Filter:` are rendered in blue.
 - **Filter**: type to fuzzy-filter items case-insensitively in real time. `Esc` clears it.
+- **History**: `Ctrl+H` opens a searchable, scrollable overlay of previously selected directories. Select an entry with `Enter`; `Esc` closes the overlay. The most recently selected directory is kept first in `~/.config/cdduck/history.json`.
+- In the History overlay, press `Ctrl+R` to remove the highlighted directory. The change is saved when you exit CDDuck.
 
 To navigate, open a folder with `Enter` and press `Alt+Enter` when you want to exit into that directory. You can also press `Esc` with an empty filter to exit into the current directory.
 

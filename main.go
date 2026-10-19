@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -11,6 +12,7 @@ import (
 	"unicode/utf8"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/x/ansi"
 )
 
 type Item struct {
@@ -19,17 +21,24 @@ type Item struct {
 }
 
 type Model struct {
-	currentDir string
-	items      []Item
-	cursor     int
-	offset     int
-	filter     string
-	filtered   []Item
-	width      int
-	height     int
-	selected   string
-	focusName  string
-	focusStack []string
+	currentDir    string
+	items         []Item
+	cursor        int
+	offset        int
+	filter        string
+	filtered      []Item
+	width         int
+	height        int
+	selected      string
+	focusName     string
+	focusStack    []string
+	historyPath   string
+	history       []string
+	historyOpen   bool
+	historyFilter string
+	historyCursor int
+	historyOffset int
+	historyDirty  bool
 }
 
 const (
@@ -58,7 +67,16 @@ func main() {
 	}
 	defer tty.Close()
 
-	m := Model{currentDir: dir}
+	historyPath, err := historyFilePath()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "cdduck: cannot locate config directory:", err)
+		os.Exit(1)
+	}
+	history, err := loadHistory(historyPath)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "cdduck: cannot read history:", err)
+	}
+	m := Model{currentDir: dir, historyPath: historyPath, history: history}
 	m.loadItems()
 
 	p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithOutput(tty))
@@ -68,9 +86,85 @@ func main() {
 		os.Exit(1)
 	}
 
-	if m, ok := final.(Model); ok && m.selected != "" {
-		fmt.Println(m.selected)
+	if m, ok := final.(Model); ok {
+		if m.selected != "" {
+			m.history = promoteHistory(m.history, m.selected)
+			m.historyDirty = true
+		}
+		if m.historyDirty {
+			if err := saveHistory(m.historyPath, m.history); err != nil {
+				fmt.Fprintln(os.Stderr, "cdduck: cannot save history:", err)
+			}
+		}
+		if m.selected != "" {
+			fmt.Println(m.selected)
+		}
 	}
+}
+
+func historyFilePath() (string, error) {
+	configDir, err := os.UserConfigDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(configDir, "cdduck", "history.json"), nil
+}
+
+func loadHistory(path string) ([]string, error) {
+	data, err := os.ReadFile(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	var history []string
+	if err := json.Unmarshal(data, &history); err != nil {
+		return nil, err
+	}
+	return history, nil
+}
+
+func saveHistory(path string, history []string) error {
+	data, err := json.MarshalIndent(history, "", "  ")
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+		return err
+	}
+	tmp, err := os.CreateTemp(filepath.Dir(path), ".history-*.tmp")
+	if err != nil {
+		return err
+	}
+	tmpName := tmp.Name()
+	defer os.Remove(tmpName)
+	if _, err := tmp.Write(data); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Chmod(0600); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tmpName, path)
+}
+
+func promoteHistory(history []string, selected string) []string {
+	selected = filepath.Clean(selected)
+	updated := []string{selected}
+	seen := map[string]bool{selected: true}
+	for _, path := range history {
+		path = filepath.Clean(path)
+		if !seen[path] {
+			updated = append(updated, path)
+			seen[path] = true
+		}
+	}
+	return updated
 }
 
 func parseArgs(args []string) (string, bool, error) {
@@ -207,10 +301,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 		m.ensureVisible()
+		m.ensureHistoryVisible()
 		return m, nil
 
 	case tea.KeyMsg:
 		k := msg.String()
+		if m.historyOpen {
+			return m.updateHistory(k, msg)
+		}
 
 		switch {
 		case k == "ctrl+c" || k == "ctrl+q":
@@ -268,6 +366,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 
 		case k == "ctrl+h":
+			m.historyOpen = true
+			m.historyFilter = ""
+			m.historyCursor = 0
+			m.historyOffset = 0
+			m.ensureHistoryVisible()
+
+		case k == "alt+h":
 			if home, err := os.UserHomeDir(); err == nil && home != "" {
 				m.currentDir = home
 				m.cursor = 0
@@ -312,6 +417,110 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+func (m *Model) updateHistory(k string, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	filtered := m.filteredHistory()
+	visible := m.historyVisibleRows()
+	switch {
+	case k == "ctrl+c" || k == "ctrl+q":
+		return m, tea.Quit
+	case k == "ctrl+h":
+		m.historyOpen = false
+	case k == "esc":
+		if m.historyFilter != "" {
+			m.historyFilter = ""
+			m.historyCursor = 0
+			m.historyOffset = 0
+		} else {
+			m.historyOpen = false
+		}
+	case k == "up":
+		if m.historyCursor > 0 {
+			m.historyCursor--
+		}
+	case k == "down":
+		if m.historyCursor < len(filtered)-1 {
+			m.historyCursor++
+		}
+	case k == "pgup":
+		m.historyCursor = max(0, m.historyCursor-visible)
+	case k == "pgdown":
+		m.historyCursor = min(len(filtered)-1, m.historyCursor+visible)
+	case k == "home":
+		m.historyCursor, m.historyOffset = 0, 0
+	case k == "end":
+		m.historyCursor = max(0, len(filtered)-1)
+	case k == "ctrl+r":
+		if len(filtered) > 0 {
+			selected := filtered[m.historyCursor]
+			for i, path := range m.history {
+				if path == selected {
+					m.history = append(m.history[:i], m.history[i+1:]...)
+					m.historyDirty = true
+					break
+				}
+			}
+			m.ensureHistoryVisible()
+		}
+	case k == "enter" || k == "alt+enter":
+		if len(filtered) > 0 {
+			m.selected = filtered[m.historyCursor]
+			return m, tea.Quit
+		}
+	case k == "backspace":
+		if m.historyFilter != "" {
+			runes := []rune(m.historyFilter)
+			m.historyFilter = string(runes[:len(runes)-1])
+			m.historyCursor, m.historyOffset = 0, 0
+		}
+	case k == "space":
+		m.historyFilter += " "
+		m.historyCursor, m.historyOffset = 0, 0
+	default:
+		if msg.Type == tea.KeyRunes {
+			m.historyFilter += string(msg.Runes)
+			m.historyCursor, m.historyOffset = 0, 0
+		}
+	}
+	m.ensureHistoryVisible()
+	return m, nil
+}
+
+func (m Model) filteredHistory() []string {
+	query := strings.ToLower(m.historyFilter)
+	filtered := make([]string, 0, len(m.history))
+	for _, path := range m.history {
+		if query == "" || fuzzyMatch(strings.ToLower(path), query) {
+			filtered = append(filtered, path)
+		}
+	}
+	return filtered
+}
+
+func (m Model) historyVisibleRows() int {
+	modalHeight := m.height * 80 / 100
+	if modalHeight > m.height {
+		modalHeight = m.height
+	}
+	if modalHeight < 1 {
+		modalHeight = 1
+	}
+	return max(1, modalHeight-6)
+}
+
+func (m *Model) ensureHistoryVisible() {
+	filteredLen := len(m.filteredHistory())
+	if m.historyCursor >= filteredLen {
+		m.historyCursor = max(0, filteredLen-1)
+	}
+	visible := m.historyVisibleRows()
+	if m.historyCursor < m.historyOffset {
+		m.historyOffset = m.historyCursor
+	}
+	if m.historyCursor >= m.historyOffset+visible {
+		m.historyOffset = m.historyCursor - visible + 1
+	}
+}
+
 func (m *Model) doEnter() {
 	if len(m.filtered) == 0 {
 		return
@@ -348,6 +557,99 @@ func (m *Model) doSelect() {
 }
 
 func (m Model) View() string {
+	base := m.mainView()
+	if !m.historyOpen {
+		return base
+	}
+	return m.overlayHistory(base)
+}
+
+func (m Model) overlayHistory(base string) string {
+	if m.width <= 0 || m.height <= 0 {
+		return base
+	}
+	modalWidth := m.width * 80 / 100
+	modalHeight := m.height * 80 / 100
+	modalWidth = min(m.width, max(1, modalWidth))
+	modalHeight = min(m.height, max(1, modalHeight))
+	left := (m.width - modalWidth) / 2
+	top := (m.height - modalHeight) / 2
+	innerWidth := max(0, modalWidth-2)
+	contentWidth := max(0, innerWidth-2)
+	visible := max(1, modalHeight-6)
+	filtered := m.filteredHistory()
+	if m.historyCursor >= len(filtered) {
+		m.historyCursor = max(0, len(filtered)-1)
+	}
+
+	title := fmt.Sprintf(" History (%d) ", len(filtered))
+	if ansi.StringWidth(title) > innerWidth {
+		title = truncateCellsWithEllipsis(title, innerWidth)
+	}
+	titleWidth := ansi.StringWidth(title)
+	leftBorder := max(0, (innerWidth-titleWidth)/2)
+	topLine := colorize("╔", ansiBlue) +
+		colorize(strings.Repeat("═", leftBorder), ansiBlue) +
+		colorize(title, ansiWhite) +
+		colorize(strings.Repeat("═", max(0, innerWidth-leftBorder-titleWidth)), ansiBlue) +
+		colorize("╗", ansiBlue)
+	bottomLine := colorize("╚", ansiBlue) + colorize(strings.Repeat("═", innerWidth), ansiBlue) + colorize("╝", ansiBlue)
+	frameLine := func(text string) string {
+		text = truncateCellsWithEllipsis(text, contentWidth)
+		pad := max(0, contentWidth-ansi.StringWidth(text))
+		return colorize("║", ansiBlue) + " " + text + strings.Repeat(" ", pad) + " " + colorize("║", ansiBlue)
+	}
+	emptyLine := colorize("║", ansiBlue) + strings.Repeat(" ", innerWidth) + colorize("║", ansiBlue)
+
+	modal := []string{topLine, emptyLine}
+	for row := 0; row < visible; row++ {
+		index := m.historyOffset + row
+		if index >= len(filtered) {
+			modal = append(modal, emptyLine)
+			continue
+		}
+		line := frameLine(filtered[index])
+		if index == m.historyCursor {
+			selected := truncateCellsWithEllipsis(filtered[index], contentWidth)
+			line = colorize("║", ansiBlue) + ansiBlueBg + " " + selected + strings.Repeat(" ", max(0, contentWidth-ansi.StringWidth(selected))) + " " + ansiReset + colorize("║", ansiBlue)
+		}
+		modal = append(modal, line)
+	}
+	if len(filtered) == 0 && visible > 0 {
+		message := "No matching directories"
+		if len(m.history) == 0 && m.historyFilter == "" {
+			message = "History is empty"
+		}
+		modal[2] = frameLine(message)
+	}
+	modal = append(modal, emptyLine)
+	filterText := "Filter: " + m.historyFilter + "█"
+	modal = append(modal, frameLine(filterText))
+	modal = append(modal, frameLine("↑↓ navigate · Enter select · Ctrl+R remove · Esc close"))
+	modal = append(modal, bottomLine)
+	if len(modal) > modalHeight {
+		modal = modal[:modalHeight]
+	}
+
+	lines := strings.Split(base, "\n")
+	for len(lines) < m.height {
+		lines = append(lines, "")
+	}
+	for row, modalLine := range modal {
+		lineIndex := top + row
+		if lineIndex < 0 || lineIndex >= len(lines) {
+			continue
+		}
+		baseLine := lines[lineIndex]
+		if ansi.StringWidth(baseLine) < m.width {
+			baseLine += strings.Repeat(" ", m.width-ansi.StringWidth(baseLine))
+		}
+		lines[lineIndex] = ansi.Cut(baseLine, 0, left) + modalLine + ansi.Cut(baseLine, left+modalWidth, m.width)
+	}
+	return strings.Join(lines, "\n")
+}
+
+func (m Model) mainView() string {
 	if m.width == 0 {
 		return ""
 	}
@@ -463,6 +765,19 @@ func truncateWithEllipsis(text string, width int) string {
 	return string(runes[:width-1]) + "…"
 }
 
+func truncateCellsWithEllipsis(text string, width int) string {
+	if width <= 0 {
+		return ""
+	}
+	if ansi.StringWidth(text) <= width {
+		return text
+	}
+	if width == 1 {
+		return "…"
+	}
+	return ansi.Cut(text, 0, width-1) + "…"
+}
+
 func (m Model) contentHeight() int {
 	return m.height - 7
 }
@@ -481,7 +796,8 @@ func shortcutsLine(width int) string {
 		{"Alt+Enter", true}, {" select  ", false},
 		{"Backspace", true}, {" up/filter  ", false},
 		{"Esc", true}, {" clear/exit  ", false},
-		{"Ctrl+H", true}, {" home  ", false},
+		{"Ctrl+H", true}, {" history  ", false},
+		{"Alt+H", true}, {" home  ", false},
 		{"Ctrl+C/Q", true}, {" quit", false},
 	}
 
