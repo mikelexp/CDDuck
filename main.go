@@ -50,7 +50,7 @@ const (
 )
 
 func main() {
-	dir, showVersion, err := parseArgs(os.Args[1:])
+	dir, showVersion, openHistory, err := parseArgs(os.Args[1:])
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "cdduck:", err)
 		os.Exit(2)
@@ -76,7 +76,7 @@ func main() {
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "cdduck: cannot read history:", err)
 	}
-	m := Model{currentDir: dir, historyPath: historyPath, history: history}
+	m := Model{currentDir: dir, historyPath: historyPath, history: history, historyOpen: openHistory}
 	m.loadItems()
 
 	p := tea.NewProgram(m, tea.WithAltScreen(), tea.WithOutput(tty))
@@ -167,24 +167,25 @@ func promoteHistory(history []string, selected string) []string {
 	return updated
 }
 
-func parseArgs(args []string) (string, bool, error) {
+func parseArgs(args []string) (string, bool, bool, error) {
 	flags := flag.NewFlagSet("cdduck", flag.ContinueOnError)
 	flags.SetOutput(os.Stderr)
 	showVersion := flags.Bool("version", false, "print version and exit")
 	flags.BoolVar(showVersion, "V", false, "print version and exit")
+	openHistory := flags.Bool("H", false, "open directory history")
 	if err := flags.Parse(args); err != nil {
-		return "", false, err
+		return "", false, false, err
 	}
 
 	paths := flags.Args()
 	if *showVersion {
 		if len(paths) != 0 {
-			return "", false, errors.New("--version does not accept a path")
+			return "", false, false, errors.New("--version does not accept a path")
 		}
-		return "", true, nil
+		return "", true, false, nil
 	}
 	if len(paths) > 1 {
-		return "", false, errors.New("accepts at most one starting path")
+		return "", false, false, errors.New("accepts at most one starting path")
 	}
 
 	dir := ""
@@ -192,24 +193,24 @@ func parseArgs(args []string) (string, bool, error) {
 		var err error
 		dir, err = filepath.Abs(paths[0])
 		if err != nil {
-			return "", false, err
+			return "", false, false, err
 		}
 	} else {
 		var err error
 		dir, err = os.Getwd()
 		if err != nil {
-			return "", false, err
+			return "", false, false, err
 		}
 	}
 
 	info, err := os.Stat(dir)
 	if err != nil {
-		return "", false, err
+		return "", false, false, err
 	}
 	if !info.IsDir() {
-		return "", false, fmt.Errorf("%q is not a directory", dir)
+		return "", false, false, fmt.Errorf("%q is not a directory", dir)
 	}
-	return dir, false, nil
+	return dir, false, *openHistory, nil
 }
 
 func (m *Model) loadItems() {

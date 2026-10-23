@@ -66,6 +66,22 @@ func TestSaveAndLoadHistory(t *testing.T) {
 	}
 }
 
+func TestParseArgsOpensHistory(t *testing.T) {
+	dir, showVersion, openHistory, err := parseArgs([]string{"-H"})
+	if err != nil {
+		t.Fatalf("parseArgs() error = %v", err)
+	}
+	if showVersion {
+		t.Error("showVersion = true, want false")
+	}
+	if !openHistory {
+		t.Error("openHistory = false, want true")
+	}
+	if dir == "" {
+		t.Error("dir is empty, want current directory")
+	}
+}
+
 func TestOpeningHistoryEntryNavigatesMainWindow(t *testing.T) {
 	root := t.TempDir()
 	target := filepath.Join(root, "target")

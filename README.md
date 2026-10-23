@@ -34,6 +34,14 @@ cdd() {
         cd -- "$dir"
     fi
 }
+
+cddh() {
+    local dir
+    dir="$(cdduck -H "$@")" || return
+    if [ -n "$dir" ]; then
+        cd -- "$dir"
+    fi
+}
 ```
 
 ### Fish
@@ -49,6 +57,14 @@ function cdd
         cd -- "$dir"
     end
 end
+
+function cddh
+    set dir (cdduck -H $argv)
+    or return
+    if test -n "$dir"
+        cd -- "$dir"
+    end
+end
 ```
 
 Add the function to `~/.bashrc`, `~/.zshrc`, or `~/.config/fish/config.fish`, then reload your shell with `source`.
@@ -57,7 +73,7 @@ To check the installed version, run `cdduck --version` or `cdduck -V`.
 
 ## Usage
 
-Run `cdd` in the terminal. The browser opens fullscreen. Pass a directory to start there, for example `cdd /run/media` or `cdd ../other-project`.
+Run `cdd` in the terminal. The browser opens fullscreen. Pass a directory to start there, for example `cdd /run/media` or `cdd ../other-project`. Run `cddh` to open directly in the directory history (`cdduck -H`); it also accepts an optional starting directory.
 
 ### Keys
 
@@ -71,6 +87,7 @@ Run `cdd` in the terminal. The browser opens fullscreen. Pass a directory to sta
 | `Backspace` | Go up a level (empty filter) / delete a character (active filter) |
 | `Esc` | Clear the filter (if there is text) or exit into the current directory |
 | `Ctrl+H` | Open the directory history |
+| `-H` | Start with the directory history open |
 | `Alt+H` | Jump to your home directory |
 | `Ctrl+C` / `Ctrl+Q` | Quit without selecting |
 
