@@ -442,6 +442,20 @@ func (m *Model) updateHistory(k string, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if m.historyCursor < len(filtered)-1 {
 			m.historyCursor++
 		}
+	case k == "ctrl+up":
+		if m.historyCursor > 0 {
+			if m.moveHistoryEntry(filtered, -1) {
+				m.historyCursor--
+			}
+		}
+		m.ensureHistoryVisible()
+	case k == "ctrl+down":
+		if m.historyCursor < len(filtered)-1 {
+			if m.moveHistoryEntry(filtered, 1) {
+				m.historyCursor++
+			}
+		}
+		m.ensureHistoryVisible()
 	case k == "pgup":
 		m.historyCursor = max(0, m.historyCursor-visible)
 	case k == "pgdown":
@@ -491,6 +505,44 @@ func (m *Model) updateHistory(k string, msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 	m.ensureHistoryVisible()
 	return *m, nil
+}
+
+// moveHistoryEntry moves the selected filtered entry across one adjacent entry
+// in the full history. With a filter active, hidden entries retain their
+// positions relative to the visible entries.
+func (m *Model) moveHistoryEntry(filtered []string, delta int) bool {
+	if m.historyCursor < 0 || m.historyCursor >= len(filtered) || (delta != -1 && delta != 1) {
+		return false
+	}
+	selected := filtered[m.historyCursor]
+	index := -1
+	for i, path := range m.history {
+		if path == selected {
+			index = i
+			break
+		}
+	}
+	if index < 0 {
+		return false
+	}
+	filteredIndex := m.historyCursor + delta
+	if filteredIndex < 0 || filteredIndex >= len(filtered) {
+		return false
+	}
+	neighbor := filtered[filteredIndex]
+	neighborIndex := -1
+	for i, path := range m.history {
+		if path == neighbor {
+			neighborIndex = i
+			break
+		}
+	}
+	if neighborIndex < 0 {
+		return false
+	}
+	m.history[index], m.history[neighborIndex] = m.history[neighborIndex], m.history[index]
+	m.historyDirty = true
+	return true
 }
 
 func (m Model) filteredHistory() []string {
@@ -633,7 +685,7 @@ func (m Model) overlayHistory(base string) string {
 	modal = append(modal, emptyLine)
 	filterText := "Filter: " + m.historyFilter + "█"
 	modal = append(modal, frameLine(filterText))
-	modal = append(modal, frameLine("↑↓ navigate · Enter open · Ctrl+R remove · Esc close"))
+	modal = append(modal, frameLine("↑↓ navigate · Ctrl+↑↓ move · Enter open · Ctrl+R remove · Esc close"))
 	modal = append(modal, bottomLine)
 	if len(modal) > modalHeight {
 		modal = modal[:modalHeight]

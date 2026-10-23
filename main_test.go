@@ -110,3 +110,60 @@ func TestOpeningHistoryEntryNavigatesMainWindow(t *testing.T) {
 		t.Errorf("selected = %q, want empty (navigation should not exit)", got.selected)
 	}
 }
+
+func TestHistoryMoveUsesFilteredEntriesAndKeepsSelection(t *testing.T) {
+	m := Model{
+		history:       []string{"/hidden", "/work/alpha", "/also-hidden", "/work/beta", "/work/gamma"},
+		historyFilter: "/work/",
+		historyCursor: 1,
+		height:        24,
+		historyOpen:   true,
+	}
+	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyCtrlUp})
+	got := updated.(Model)
+	wantHistory := []string{"/hidden", "/work/beta", "/also-hidden", "/work/alpha", "/work/gamma"}
+	if !reflect.DeepEqual(got.history, wantHistory) {
+		t.Fatalf("history after move up = %#v, want %#v", got.history, wantHistory)
+	}
+	if got.historyCursor != 0 {
+		t.Errorf("historyCursor after move up = %d, want 0", got.historyCursor)
+	}
+	if got.filteredHistory()[got.historyCursor] != "/work/beta" {
+		t.Errorf("selected entry after move = %q, want %q", got.filteredHistory()[got.historyCursor], "/work/beta")
+	}
+	if !got.historyDirty {
+		t.Error("historyDirty = false after moving entry, want true")
+	}
+}
+
+func TestHistoryNavigationDoesNotClearDirty(t *testing.T) {
+	m := Model{
+		history:      []string{"/one", "/two"},
+		historyDirty: true,
+		historyOpen:  true,
+	}
+	updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyDown})
+	if !updated.(Model).historyDirty {
+		t.Error("historyDirty was cleared by navigation")
+	}
+}
+
+func TestHistoryMoveBoundariesDoNotModifyHistory(t *testing.T) {
+	for _, key := range []tea.KeyType{tea.KeyCtrlUp, tea.KeyCtrlDown} {
+		t.Run(key.String(), func(t *testing.T) {
+			m := Model{history: []string{"/one", "/two"}, historyOpen: true}
+			if key == tea.KeyCtrlDown {
+				m.historyCursor = 1
+			}
+			before := append([]string(nil), m.history...)
+			updated, _ := m.Update(tea.KeyMsg{Type: key})
+			got := updated.(Model)
+			if !reflect.DeepEqual(got.history, before) {
+				t.Errorf("history at move boundary = %#v, want %#v", got.history, before)
+			}
+			if got.historyDirty {
+				t.Error("historyDirty = true at move boundary, want false")
+			}
+		})
+	}
+}
