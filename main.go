@@ -87,7 +87,7 @@ func main() {
 	}
 
 	if m, ok := final.(Model); ok {
-		if m.selected != "" {
+		if shouldRecordHistory(dir, m.selected) {
 			m.history = promoteHistory(m.history, m.selected)
 			m.historyDirty = true
 		}
@@ -100,6 +100,10 @@ func main() {
 			fmt.Println(m.selected)
 		}
 	}
+}
+
+func shouldRecordHistory(initialDir, selected string) bool {
+	return selected != "" && filepath.Clean(selected) != filepath.Clean(initialDir)
 }
 
 func historyFilePath() (string, error) {

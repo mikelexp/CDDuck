@@ -39,6 +39,21 @@ func TestPromoteHistoryMovesSelectionToFrontAndDeduplicates(t *testing.T) {
 	}
 }
 
+func TestShouldRecordHistoryOnlyWhenDirectoryChanges(t *testing.T) {
+	if shouldRecordHistory("/work/project", "/work/project") {
+		t.Error("shouldRecordHistory() = true for the starting directory, want false")
+	}
+	if shouldRecordHistory("/work/project/", "/work/project") {
+		t.Error("shouldRecordHistory() = true for equivalent paths, want false")
+	}
+	if !shouldRecordHistory("/work/project", "/work/other") {
+		t.Error("shouldRecordHistory() = false after changing directory, want true")
+	}
+	if shouldRecordHistory("/work/project", "") {
+		t.Error("shouldRecordHistory() = true without a selection, want false")
+	}
+}
+
 func TestHistoryFiltering(t *testing.T) {
 	m := Model{
 		history:       []string{"/home/mikele/project", "/tmp"},
